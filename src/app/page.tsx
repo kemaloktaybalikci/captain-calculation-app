@@ -15,7 +15,7 @@ export default function Home() {
 	const step = state.currentStep;
 
 	return (
-		<div className="min-h-screen bg-zinc-100 text-zinc-900">
+		<div className="min-h-screen bg-zinc-100 text-zinc-900 pb-24">
 			<header className="bg-white border-b border-zinc-200">
 				<div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap gap-3 items-center justify-between">
 					<div>
@@ -42,21 +42,23 @@ export default function Home() {
 				)}
 			</main>
 
-			<footer className="max-w-6xl mx-auto px-4 py-5 flex justify-between items-center border-t border-zinc-200 mt-2">
-				<Button variant="secondary" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0 || !loaded}>
-					← Geri
-				</Button>
-				<Button onClick={() => setStep(Math.min(LAST_STEP, step + 1))} disabled={step === LAST_STEP || !loaded}>
-					İleri →
-				</Button>
+			<footer className="fixed bottom-0 left-0 right-0 z-20 bg-white/90 backdrop-blur-sm border-t border-zinc-200">
+				<div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+					<Button variant="secondary" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0 || !loaded}>
+						← Geri
+					</Button>
+					<div className="hidden md:flex items-center text-xs text-zinc-500 truncate">
+						<a href="https://tenisin.com" target="_blank" rel="noreferrer" className="hover:text-zinc-700 transition-colors">
+							tenisin.com
+						</a>
+						<span className="mx-2 text-zinc-400">·</span>
+						<span>Kemal Oktay Balıkçı &amp; Kaan Erdoğan hayratıdır.</span>
+					</div>
+					<Button onClick={() => setStep(Math.min(LAST_STEP, step + 1))} disabled={step === LAST_STEP || !loaded}>
+						İleri →
+					</Button>
+				</div>
 			</footer>
-			<div className="max-w-6xl mx-auto px-4 pb-6 text-center text-xs text-zinc-500">
-				<a href="https://tenisin.com" target="_blank" rel="noreferrer" className="hover:text-zinc-700 transition-colors">
-					tenisin.com
-				</a>
-				<span className="mx-2 text-zinc-400">·</span>
-				<span>Kemal Oktay Balıkçı & Kaan Erdoğan hayratıdır.</span>
-			</div>
 		</div>
 	);
 }
