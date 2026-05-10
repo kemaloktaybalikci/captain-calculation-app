@@ -1,5 +1,10 @@
-import type { AppState, Config } from "./types";
-import { STORAGE_KEY, STORAGE_VERSION } from "./types";
+import type { AppState, CalcMode, Config } from "./types";
+import {
+  BASE_RATE_MAX,
+  BASE_RATE_MIN,
+  STORAGE_KEY,
+  STORAGE_VERSION,
+} from "./types";
 import { defaultState } from "./defaults";
 
 interface StoredEnvelope {
@@ -38,11 +43,20 @@ export function clearState(): void {
 function mergeWithDefaults(state: Partial<AppState> | undefined): AppState {
   if (!state) return defaultState;
   const cfg = (state.config ?? {}) as Partial<Config>;
+  const calcMode: CalcMode =
+    cfg.calcMode === "base-rate" ? "base-rate" : "per-match";
+  const rawRate =
+    typeof cfg.baseRatePercent === "number" && Number.isFinite(cfg.baseRatePercent)
+      ? cfg.baseRatePercent
+      : defaultState.config.baseRatePercent;
+  const baseRatePercent = Math.max(BASE_RATE_MIN, Math.min(BASE_RATE_MAX, rawRate));
   return {
     config: {
       ...defaultState.config,
       ...cfg,
-      topMode: "full-settlement",
+      calcMode,
+      baseRatePercent,
+      sponsorContribution: calcMode === "base-rate" ? 0 : (cfg.sponsorContribution ?? 0),
     },
     players: (state.players ?? []).map((p) => ({
       id: p.id,

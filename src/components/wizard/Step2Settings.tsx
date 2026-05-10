@@ -2,31 +2,66 @@
 import type { CalcStateApi } from "../../hooks/useCalcState";
 import { Card, Field, NumberInput } from "../ui/Field";
 import { formatTL } from "../../lib/format";
+import {
+  BASE_RATE_MAX,
+  BASE_RATE_MIN,
+  BASE_RATE_STEP,
+  type CalcMode,
+} from "../../lib/types";
 
 export function Step2Settings({ api }: { api: CalcStateApi }) {
   const { state, setConfig } = api;
   const c = state.config;
+  const isBaseRate = c.calcMode === "base-rate";
 
   const totalAdvance = state.players.reduce((s, p) => s + p.advance, 0);
   const collectedPlusSponsor = totalAdvance + c.sponsorContribution;
-  const netDiff = collectedPlusSponsor - c.leagueFee;
-  const lDist = c.leagueFee - c.sponsorContribution;
+  const netDiff = isBaseRate
+    ? totalAdvance - c.leagueFee
+    : collectedPlusSponsor - c.leagueFee;
+  const lDist = isBaseRate
+    ? c.leagueFee
+    : c.leagueFee - c.sponsorContribution;
   const M_nonExempt = state.players
     .filter((p) => !p.exempt)
     .reduce((s, p) => s + p.matches, 0);
-  const autoCostPerMatch = M_nonExempt > 0 ? lDist / M_nonExempt : 0;
+
+  const baseRate = clampRate(c.baseRatePercent) / 100;
+  const baseFixedTotal = isBaseRate
+    ? state.players
+        .filter((p) => !p.exempt)
+        .reduce((s, p) => s + p.advance * baseRate, 0)
+    : 0;
+  const distributable = isBaseRate ? c.leagueFee - baseFixedTotal : lDist;
+  const autoCostPerMatch =
+    M_nonExempt > 0 ? Math.max(0, distributable) / M_nonExempt : 0;
   const settingsInvalid = c.leagueFee > 0 && Math.abs(netDiff) >= 0.5;
   const netTone =
     c.leagueFee === 0 ? "neutral" : settingsInvalid ? "warn" : "ok";
+
+  const setMode = (mode: CalcMode) => {
+    if (mode === "base-rate") {
+      setConfig({ calcMode: mode, sponsorContribution: 0 });
+    } else {
+      setConfig({ calcMode: mode });
+    }
+  };
 
   return (
     <div className="grid gap-5">
       <Card title="Hesaplama Modu">
         <div className="grid gap-3 md:grid-cols-2">
           <ModeOption
-            checked
+            checked={c.calcMode === "per-match"}
+            onChange={() => setMode("per-match")}
             title="Maç Başı Pay"
             desc="Toplanan + sponsor = lig ücreti olmalı. Lig ücreti, muaf olmayanların maçlarına bölünür. Σ net = 0."
+          />
+          <ModeOption
+            checked={c.calcMode === "base-rate"}
+            onChange={() => setMode("base-rate")}
+            title="Baz Oranlı Pay"
+            desc="Her oyuncunun verdiği paranın belirlenen yüzdesi sabit kalır. Kalan tutar maç sayılarına bölünür."
           />
         </div>
       </Card>
@@ -47,25 +82,59 @@ export function Step2Settings({ api }: { api: CalcStateApi }) {
                 min={0}
               />
             </Field>
-            <Field label="Sponsor / Ek Ödeme (TL)" hint="Lig ücretinden düşer.">
-              <NumberInput
-                value={c.sponsorContribution}
-                onChange={(v) => setConfig({ sponsorContribution: v })}
-                min={0}
-              />
-            </Field>
+            {!isBaseRate && (
+              <Field
+                label="Sponsor / Ek Ödeme (TL)"
+                hint="Lig ücretinden düşer."
+              >
+                <NumberInput
+                  value={c.sponsorContribution}
+                  onChange={(v) => setConfig({ sponsorContribution: v })}
+                  min={0}
+                />
+              </Field>
+            )}
+            {isBaseRate && (
+              <Field
+                label="Baz Oran (%)"
+                hint={`${BASE_RATE_MIN}–${BASE_RATE_MAX} arası, ${BASE_RATE_STEP}'lik adımla. Sonuç ekranındaki kaydırıcıyla geçici olarak da değiştirilebilir.`}
+              >
+                <BaseRateInput
+                  value={clampRate(c.baseRatePercent)}
+                  onChange={(v) => setConfig({ baseRatePercent: v })}
+                />
+              </Field>
+            )}
           </div>
           <div className="grid gap-3 content-start">
-            <Field label="Net (Toplanan + Sponsor − Lig)">
+            <Field
+              label={
+                isBaseRate
+                  ? "Net (Toplanan − Lig)"
+                  : "Net (Toplanan + Sponsor − Lig)"
+              }
+            >
               <ReadOnlyAmount value={netDiff} tone={netTone} />
             </Field>
-            <Field label="Dağıtılacak (Lig − Sponsor)">
-              <ReadOnlyAmount value={lDist} />
+            <Field
+              label={
+                isBaseRate
+                  ? `Sabit Tutar (Toplanan × %${clampRate(c.baseRatePercent)})`
+                  : "Dağıtılacak (Lig − Sponsor)"
+              }
+            >
+              <ReadOnlyAmount value={isBaseRate ? baseFixedTotal : lDist} />
             </Field>
+            {isBaseRate && (
+              <Field label="Maçlara Dağıtılacak (Lig − Sabit)">
+                <ReadOnlyAmount value={Math.max(0, distributable)} />
+              </Field>
+            )}
             {settingsInvalid && (
               <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                Toplanan + sponsor, lig ücretine eşit olmalı. Aksi halde
-                hesaplama yapılamaz.
+                {isBaseRate
+                  ? "Toplanan, lig ücretine eşit olmalı. Aksi halde dağılım tutmaz."
+                  : "Toplanan + sponsor, lig ücretine eşit olmalı. Aksi halde hesaplama yapılamaz."}
               </div>
             )}
             {M_nonExempt > 0 && (
@@ -97,6 +166,42 @@ export function Step2Settings({ api }: { api: CalcStateApi }) {
           />
         </div>
       </Card>
+    </div>
+  );
+}
+
+function clampRate(value: number): number {
+  if (!Number.isFinite(value)) return BASE_RATE_MIN;
+  return Math.max(BASE_RATE_MIN, Math.min(BASE_RATE_MAX, value));
+}
+
+function snapRate(value: number): number {
+  const clamped = clampRate(value);
+  return Math.round(clamped / BASE_RATE_STEP) * BASE_RATE_STEP;
+}
+
+function BaseRateInput({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <input
+        type="range"
+        min={BASE_RATE_MIN}
+        max={BASE_RATE_MAX}
+        step={BASE_RATE_STEP}
+        value={value}
+        onChange={(e) => onChange(snapRate(Number(e.target.value)))}
+        className="flex-1 accent-zinc-900"
+        aria-label="Baz oran yüzdesi"
+      />
+      <div className="text-sm font-semibold tabular-nums text-zinc-900 w-12 text-right">
+        %{value}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { AppState, Config, Player } from "./types";
+import { DEFAULT_BASE_RATE_PERCENT } from "./types";
 
 export function makePlayer(
   name: string,
@@ -17,9 +18,10 @@ export function makePlayer(
 }
 
 export const defaultConfig: Config = {
-  topMode: "full-settlement",
+  calcMode: "per-match",
   leagueFee: 0,
   sponsorContribution: 0,
+  baseRatePercent: DEFAULT_BASE_RATE_PERCENT,
   settlementMode: "kasa",
 };
 

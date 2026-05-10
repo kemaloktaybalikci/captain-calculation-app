@@ -1,17 +1,22 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CalcStateApi } from "../../hooks/useCalcState";
 import { calculate, settle } from "../../lib/algorithm";
 import { formatTL } from "../../lib/format";
 import { Button, Card } from "../ui/Field";
-import type {
-  CalculationResult,
-  SettlementResult,
+import {
+  BASE_RATE_MAX,
+  BASE_RATE_MIN,
+  BASE_RATE_STEP,
+  type CalculationResult,
+  type Config,
+  type SettlementResult,
 } from "../../lib/types";
 
 interface ComputedResult {
   calc: CalculationResult;
   settlement: SettlementResult;
+  effectiveBaseRate: number;
 }
 
 const COMPUTE_DELAY_MS = 350;
@@ -24,6 +29,25 @@ export function Step3Compute({
   onGoToStep: (step: number) => void;
 }) {
   const { state } = api;
+  const isBaseRate = state.config.calcMode === "base-rate";
+  const configuredRate = clampRate(state.config.baseRatePercent);
+  const [rateOverride, setRateOverride] = useState<number | null>(null);
+
+  useEffect(() => {
+    setRateOverride(null);
+  }, [configuredRate, isBaseRate]);
+
+  const effectiveRate =
+    isBaseRate && rateOverride !== null ? rateOverride : configuredRate;
+
+  const computeConfig = useMemo<Config>(
+    () =>
+      isBaseRate
+        ? { ...state.config, baseRatePercent: effectiveRate }
+        : state.config,
+    [state.config, isBaseRate, effectiveRate],
+  );
+
   const [result, setResult] = useState<ComputedResult | null>(null);
   const [computing, setComputing] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -37,16 +61,20 @@ export function Step3Compute({
     setResult(null);
     const timer = setTimeout(() => {
       if (cancelled) return;
-      const calc = calculate(state.config, state.players);
-      const settlement = settle(state.config, calc);
-      setResult({ calc, settlement });
+      const calc = calculate(computeConfig, state.players);
+      const settlement = settle(computeConfig, calc);
+      setResult({
+        calc,
+        settlement,
+        effectiveBaseRate: effectiveRate,
+      });
       setComputing(false);
     }, COMPUTE_DELAY_MS);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [state.config, state.players]);
+  }, [computeConfig, state.players, effectiveRate]);
 
   if (state.players.length === 0) {
     return <EmptyState onGoToStep={onGoToStep} />;
@@ -59,7 +87,7 @@ export function Step3Compute({
     try {
       const { exportResultsToExcel } = await import("../../lib/excel");
       await exportResultsToExcel({
-        config: state.config,
+        config: computeConfig,
         players: state.players,
         calc: result.calc,
         settlement: result.settlement,
@@ -71,17 +99,108 @@ export function Step3Compute({
     }
   };
 
-  if (computing || !result) {
-    return <ComputingState />;
-  }
+  const overrideActive = isBaseRate && rateOverride !== null;
 
   return (
-    <ResultsView
-      result={result}
-      exporting={exporting}
-      exportError={exportError}
-      onExport={handleExport}
-    />
+    <div className="grid gap-4 step-fade-in">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <div className="text-xs uppercase tracking-wide text-zinc-500">
+            Sonuç
+          </div>
+          <div className="text-xl font-semibold text-zinc-900">
+            {isBaseRate ? "Baz Oranlı Pay" : "Maç Başı Pay"}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {exportError && (
+            <span className="text-xs text-red-600">{exportError}</span>
+          )}
+          <Button onClick={handleExport} disabled={exporting || !result}>
+            {exporting ? "Hazırlanıyor…" : "Excel İndir"}
+          </Button>
+        </div>
+      </div>
+
+      {isBaseRate && (
+        <BaseRateSlider
+          value={effectiveRate}
+          configured={configuredRate}
+          overrideActive={overrideActive}
+          onChange={(v) =>
+            setRateOverride(v === configuredRate ? null : v)
+          }
+          onReset={() => setRateOverride(null)}
+        />
+      )}
+
+      {computing || !result ? (
+        <ComputingState />
+      ) : (
+        <ResultsView result={result} />
+      )}
+    </div>
+  );
+}
+
+function clampRate(value: number): number {
+  if (!Number.isFinite(value)) return BASE_RATE_MIN;
+  return Math.max(BASE_RATE_MIN, Math.min(BASE_RATE_MAX, value));
+}
+
+function snapRate(value: number): number {
+  const clamped = clampRate(value);
+  return Math.round(clamped / BASE_RATE_STEP) * BASE_RATE_STEP;
+}
+
+function BaseRateSlider({
+  value,
+  configured,
+  overrideActive,
+  onChange,
+  onReset,
+}: {
+  value: number;
+  configured: number;
+  overrideActive: boolean;
+  onChange: (v: number) => void;
+  onReset: () => void;
+}) {
+  return (
+    <Card>
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="min-w-[140px]">
+          <div className="text-xs uppercase tracking-wide text-zinc-500">
+            Baz Oran
+          </div>
+          <div className="text-2xl font-semibold tabular-nums text-zinc-900">
+            %{value}
+          </div>
+          <div className="text-xs text-zinc-500 mt-0.5">
+            {overrideActive
+              ? `Geçici (ayar: %${configured})`
+              : `Ayarlardaki değer`}
+          </div>
+        </div>
+        <div className="flex-1 min-w-[200px] flex items-center gap-3">
+          <input
+            type="range"
+            min={BASE_RATE_MIN}
+            max={BASE_RATE_MAX}
+            step={BASE_RATE_STEP}
+            value={value}
+            onChange={(e) => onChange(snapRate(Number(e.target.value)))}
+            className="flex-1 accent-zinc-900"
+            aria-label="Baz oran kaydırıcısı"
+          />
+        </div>
+        {overrideActive && (
+          <Button variant="ghost" onClick={onReset}>
+            Sıfırla
+          </Button>
+        )}
+      </div>
+    </Card>
   );
 }
 
@@ -129,9 +248,7 @@ function ComputingState() {
   return (
     <Card>
       <div className="flex items-center gap-4 py-4">
-        <div className="text-sm font-medium text-zinc-700">
-          Hesaplanıyor…
-        </div>
+        <div className="text-sm font-medium text-zinc-700">Hesaplanıyor…</div>
         <div className="flex-1 h-1.5 rounded-full bg-zinc-100 overflow-hidden">
           <div className="h-full w-1/3 bg-zinc-900 rounded-full progress-indeterminate" />
         </div>
@@ -140,18 +257,9 @@ function ComputingState() {
   );
 }
 
-function ResultsView({
-  result,
-  exporting,
-  exportError,
-  onExport,
-}: {
-  result: ComputedResult;
-  exporting: boolean;
-  exportError: string;
-  onExport: () => void;
-}) {
+function ResultsView({ result }: { result: ComputedResult }) {
   const { calc, settlement } = result;
+  const isBaseRate = calc.mode === "base-rate";
   const kasaState =
     Math.abs(calc.kasaBalance) <= 0.5
       ? "balanced"
@@ -160,33 +268,10 @@ function ResultsView({
         : "deficit";
 
   return (
-    <div className="grid gap-4 step-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <div className="text-xs uppercase tracking-wide text-zinc-500">
-            Sonuç
-          </div>
-          <div className="text-xl font-semibold text-zinc-900">
-            Maç Başı Pay
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {exportError && (
-            <span className="text-xs text-red-600">
-              {exportError}
-            </span>
-          )}
-          <Button onClick={onExport} disabled={exporting}>
-            {exporting ? "Hazırlanıyor…" : "Excel İndir"}
-          </Button>
-        </div>
-      </div>
-
+    <div className="grid gap-4">
       {calc.warnings.length > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <div className="text-sm font-medium text-amber-900 mb-1">
-            Uyarı
-          </div>
+          <div className="text-sm font-medium text-amber-900 mb-1">Uyarı</div>
           <ul className="text-xs text-amber-800 list-disc pl-5 space-y-0.5">
             {calc.warnings.map((w, i) => (
               <li key={i}>{w}</li>
@@ -198,14 +283,21 @@ function ResultsView({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat label="Maç Birim" value={formatTL(calc.costPerMatch)} />
         <Stat
-          label="Toplam Pay"
-          value={formatTL(calc.totalShareDistributed)}
+          label={isBaseRate ? "Maç Payı Toplam" : "Toplam Pay"}
+          value={formatTL(
+            isBaseRate
+              ? calc.totalShareDistributed - calc.totalBaseShare
+              : calc.totalShareDistributed,
+          )}
+          hint={
+            isBaseRate
+              ? `Sabit kısım: ${formatTL(calc.totalBaseShare)}`
+              : undefined
+          }
         />
         <Stat
           label="Toplam Avans"
-          value={formatTL(
-            calc.perPlayer.reduce((s, r) => s + r.advance, 0),
-          )}
+          value={formatTL(calc.perPlayer.reduce((s, r) => s + r.advance, 0))}
         />
         <Stat
           label="Kasa Bakiyesi"
@@ -236,6 +328,9 @@ function ResultsView({
                 <th className="py-2.5 px-2 font-medium">Ad</th>
                 <th className="py-2.5 px-2 font-medium text-right">Maç</th>
                 <th className="py-2.5 px-2 font-medium text-right">İlk Ücret</th>
+                {isBaseRate && (
+                  <th className="py-2.5 px-2 font-medium text-right">Sabit</th>
+                )}
                 <th className="py-2.5 px-2 font-medium text-right">Pay</th>
                 <th className="py-2.5 px-2 font-medium text-right">Net</th>
                 <th className="py-2.5 px-2"></th>
@@ -251,9 +346,7 @@ function ResultsView({
                     {idx + 1}
                   </td>
                   <td className="py-3 px-2">
-                    <div className="font-medium text-zinc-900">
-                      {r.name}
-                    </div>
+                    <div className="font-medium text-zinc-900">{r.name}</div>
                     {(r.exempt || r.notes.length > 0) && (
                       <div className="text-xs text-zinc-500 mt-0.5 flex gap-1.5 flex-wrap items-center">
                         {r.exempt && <Badge tone="muted">muaf</Badge>}
@@ -269,8 +362,18 @@ function ResultsView({
                   <td className="py-3 px-2 text-right tabular-nums text-zinc-900">
                     {formatTL(r.advance)}
                   </td>
+                  {isBaseRate && (
+                    <td className="py-3 px-2 text-right tabular-nums text-zinc-600">
+                      {formatTL(r.baseShare)}
+                    </td>
+                  )}
                   <td className="py-3 px-2 text-right tabular-nums text-zinc-600">
                     {formatTL(r.share)}
+                    {isBaseRate && !r.exempt && (r.baseShare > 0 || r.matchShare > 0) && (
+                      <div className="text-[10px] text-zinc-400 mt-0.5">
+                        {formatTL(r.baseShare)} + {formatTL(r.matchShare)}
+                      </div>
+                    )}
                   </td>
                   <td
                     className={`py-3 px-2 text-right tabular-nums font-semibold ${
@@ -338,13 +441,9 @@ function ResultsView({
                   className="flex items-center justify-between py-3 text-sm"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="text-red-700 font-medium">
-                      {t.from}
-                    </span>
+                    <span className="text-red-700 font-medium">{t.from}</span>
                     <span className="text-zinc-400">→</span>
-                    <span className="text-emerald-700 font-medium">
-                      {t.to}
-                    </span>
+                    <span className="text-emerald-700 font-medium">{t.to}</span>
                   </span>
                   <span className="font-semibold tabular-nums text-zinc-900">
                     {formatTL(t.amount)}
@@ -392,16 +491,10 @@ function Stat({
       <div className="text-xs uppercase tracking-wide text-zinc-500">
         {label}
       </div>
-      <div
-        className={`text-lg font-semibold mt-1 tabular-nums ${valueCls}`}
-      >
+      <div className={`text-lg font-semibold mt-1 tabular-nums ${valueCls}`}>
         {value}
       </div>
-      {hint && (
-        <div className="text-xs text-zinc-500 mt-0.5">
-          {hint}
-        </div>
-      )}
+      {hint && <div className="text-xs text-zinc-500 mt-0.5">{hint}</div>}
     </div>
   );
 }
@@ -438,18 +531,14 @@ function FlowList({
   emptyText: string;
 }) {
   const amountCls =
-    tone === "positive"
-      ? "text-emerald-700"
-      : "text-red-700";
+    tone === "positive" ? "text-emerald-700" : "text-red-700";
   return (
     <div>
       <div className="text-xs uppercase font-medium text-zinc-500 mb-2">
         {title}
       </div>
       {items.length === 0 ? (
-        <div className="text-sm text-zinc-400">
-          {emptyText}
-        </div>
+        <div className="text-sm text-zinc-400">{emptyText}</div>
       ) : (
         <ul className="divide-y divide-zinc-100">
           {items.map((it, i) => (
@@ -457,9 +546,7 @@ function FlowList({
               key={i}
               className="flex justify-between items-center py-2 text-sm"
             >
-              <span className="text-zinc-700">
-                {it.left}
-              </span>
+              <span className="text-zinc-700">{it.left}</span>
               <span className={`font-semibold tabular-nums ${amountCls}`}>
                 {formatTL(it.amount)}
               </span>

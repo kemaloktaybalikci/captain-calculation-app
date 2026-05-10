@@ -1,4 +1,4 @@
-export type TopMode = "full-settlement";
+export type CalcMode = "per-match" | "base-rate";
 
 export type SettlementMode = "kasa" | "p2p";
 
@@ -11,9 +11,10 @@ export interface Player {
 }
 
 export interface Config {
-  topMode: TopMode;
+  calcMode: CalcMode;
   leagueFee: number;
   sponsorContribution: number;
+  baseRatePercent: number;
   settlementMode: SettlementMode;
 }
 
@@ -24,15 +25,20 @@ export interface PlayerResult {
   advance: number;
   exempt: boolean;
   share: number;
+  baseShare: number;
+  matchShare: number;
   net: number;
   finalNet: number;
   notes: string[];
 }
 
 export interface CalculationResult {
+  mode: CalcMode;
   perPlayer: PlayerResult[];
   costPerMatch: number;
   totalShareDistributed: number;
+  totalBaseShare: number;
+  baseRatePercent: number;
   kasaBalance: number;
   warnings: string[];
 }
@@ -62,5 +68,9 @@ export interface AppState {
   currentStep: number;
 }
 
-export const STORAGE_KEY = "captain-calc-state-v2";
-export const STORAGE_VERSION = 2;
+export const STORAGE_KEY = "captain-calc-state-v3";
+export const STORAGE_VERSION = 3;
+export const DEFAULT_BASE_RATE_PERCENT = 40;
+export const BASE_RATE_STEP = 5;
+export const BASE_RATE_MIN = 0;
+export const BASE_RATE_MAX = 100;

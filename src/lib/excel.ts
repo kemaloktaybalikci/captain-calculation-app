@@ -28,6 +28,8 @@ export async function exportResultsToExcel(args: {
   const totalAdvance = calc.perPlayer.reduce((s, r) => s + r.advance, 0);
   const today = new Date().toLocaleDateString("tr-TR");
   const isKasa = settlement.mode === "kasa";
+  const isBaseRate = calc.mode === "base-rate";
+  const modeLabel = isBaseRate ? "Baz Oranlı Pay" : "Maç Başı Pay";
 
   const rows: Cell[][] = [];
   const merges: MergeRange[] = [];
@@ -39,7 +41,7 @@ export async function exportResultsToExcel(args: {
   };
 
   // Title
-  pushBanner(`Kaptan Hesap — Maç Başı Pay · ${today}`);
+  pushBanner(`Kaptan Hesap — ${modeLabel} · ${today}`);
   rows.push([]);
 
   // Stats — two columns of label/value pairs
@@ -51,14 +53,25 @@ export async function exportResultsToExcel(args: {
     round2(calc.costPerMatch),
     "",
   ]);
-  rows.push([
-    "Sponsor / Ek Ödeme",
-    config.sponsorContribution,
-    "",
-    "Toplam Dağıtılan Pay",
-    round2(calc.totalShareDistributed),
-    "",
-  ]);
+  if (isBaseRate) {
+    rows.push([
+      `Baz Oran (%${calc.baseRatePercent})`,
+      round2(calc.totalBaseShare),
+      "",
+      "Maçlara Dağıtılan",
+      round2(calc.totalShareDistributed - calc.totalBaseShare),
+      "",
+    ]);
+  } else {
+    rows.push([
+      "Sponsor / Ek Ödeme",
+      config.sponsorContribution,
+      "",
+      "Toplam Dağıtılan Pay",
+      round2(calc.totalShareDistributed),
+      "",
+    ]);
+  }
   rows.push([
     "Toplanan Avans",
     round2(totalAdvance),
@@ -121,7 +134,18 @@ export async function exportResultsToExcel(args: {
 
   // Section: Per-player breakdown
   pushBanner("OYUNCULAR");
-  rows.push(["Oyuncu Adı", "Maç Sayısı", "İlk Ücret", "Pay", "Net", "Durum"]);
+  if (isBaseRate) {
+    rows.push([
+      "Oyuncu Adı",
+      "Maç Sayısı",
+      "İlk Ücret",
+      "Sabit",
+      "Maç Payı",
+      "Toplam Pay",
+    ]);
+  } else {
+    rows.push(["Oyuncu Adı", "Maç Sayısı", "İlk Ücret", "Pay", "Net", "Durum"]);
+  }
   for (const r of calc.perPlayer) {
     const status = r.exempt
       ? "Muaf"
@@ -134,23 +158,45 @@ export async function exportResultsToExcel(args: {
             ? "Kasaya borçlu"
             : "Borçlu"
           : "Eşit";
+    if (isBaseRate) {
+      rows.push([
+        r.name,
+        r.matches,
+        round2(r.advance),
+        round2(r.baseShare),
+        round2(r.matchShare),
+        round2(r.share),
+      ]);
+    } else {
+      rows.push([
+        r.name,
+        r.matches,
+        round2(r.advance),
+        round2(r.share),
+        round2(r.finalNet),
+        status,
+      ]);
+    }
+  }
+  if (isBaseRate) {
     rows.push([
-      r.name,
-      r.matches,
-      round2(r.advance),
-      round2(r.share),
-      round2(r.finalNet),
-      status,
+      "TOPLAM",
+      calc.perPlayer.reduce((s, r) => s + r.matches, 0),
+      round2(totalAdvance),
+      round2(calc.totalBaseShare),
+      round2(calc.totalShareDistributed - calc.totalBaseShare),
+      round2(calc.totalShareDistributed),
+    ]);
+  } else {
+    rows.push([
+      "TOPLAM",
+      calc.perPlayer.reduce((s, r) => s + r.matches, 0),
+      round2(totalAdvance),
+      round2(calc.totalShareDistributed),
+      round2(calc.perPlayer.reduce((s, r) => s + r.finalNet, 0)),
+      "",
     ]);
   }
-  rows.push([
-    "TOPLAM",
-    calc.perPlayer.reduce((s, r) => s + r.matches, 0),
-    round2(totalAdvance),
-    round2(calc.totalShareDistributed),
-    round2(calc.perPlayer.reduce((s, r) => s + r.finalNet, 0)),
-    "",
-  ]);
 
   if (calc.warnings.length > 0) {
     rows.push([]);
@@ -177,36 +223,75 @@ export async function exportResultsToExcel(args: {
   XLSX.utils.book_append_sheet(wb, ws, "Mahsup");
 
   // Detail sheet — full per-player breakdown for transparency
+  const detailHeader: Cell[] = isBaseRate
+    ? [
+        "Oyuncu Adı",
+        "Muaf",
+        "Maç Sayısı",
+        "İlk Ücret",
+        "Sabit",
+        "Maç Payı",
+        "Toplam Pay",
+        "Net",
+        "Notlar",
+      ]
+    : [
+        "Oyuncu Adı",
+        "Muaf",
+        "Maç Sayısı",
+        "İlk Ücret",
+        "Pay",
+        "Net",
+        "Notlar",
+      ];
   const detail: Cell[][] = [
-    [
-      "Oyuncu Adı",
-      "Muaf",
-      "Maç Sayısı",
-      "İlk Ücret",
-      "Pay",
-      "Net",
-      "Notlar",
-    ],
-    ...calc.perPlayer.map((r): Cell[] => [
-      r.name,
-      r.exempt ? "Evet" : "Hayır",
-      r.matches,
-      round2(r.advance),
-      round2(r.share),
-      round2(r.finalNet),
-      r.notes.join(" | "),
-    ]),
+    detailHeader,
+    ...calc.perPlayer.map((r): Cell[] =>
+      isBaseRate
+        ? [
+            r.name,
+            r.exempt ? "Evet" : "Hayır",
+            r.matches,
+            round2(r.advance),
+            round2(r.baseShare),
+            round2(r.matchShare),
+            round2(r.share),
+            round2(r.finalNet),
+            r.notes.join(" | "),
+          ]
+        : [
+            r.name,
+            r.exempt ? "Evet" : "Hayır",
+            r.matches,
+            round2(r.advance),
+            round2(r.share),
+            round2(r.finalNet),
+            r.notes.join(" | "),
+          ],
+    ),
   ];
   const wsDetail = XLSX.utils.aoa_to_sheet(detail);
-  wsDetail["!cols"] = [
-    { wch: 20 },
-    { wch: 8 },
-    { wch: 8 },
-    { wch: 14 },
-    { wch: 14 },
-    { wch: 14 },
-    { wch: 36 },
-  ];
+  wsDetail["!cols"] = isBaseRate
+    ? [
+        { wch: 20 },
+        { wch: 8 },
+        { wch: 8 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 36 },
+      ]
+    : [
+        { wch: 20 },
+        { wch: 8 },
+        { wch: 8 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 36 },
+      ];
   XLSX.utils.book_append_sheet(wb, wsDetail, "Detay");
 
   XLSX.writeFile(

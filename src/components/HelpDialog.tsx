@@ -61,6 +61,27 @@ export function HelpDialog({
             </Example>
           </Section>
 
+          <Section title="Baz Oranlı Pay">
+            <p>
+              Her oyuncunun verdiği paranın <em>belirlenen yüzdesi</em> sabit
+              olarak kendi payına yazılır. Bu sabit kısımlar lig ücretinden
+              düşülür, kalan tutar muaf olmayan oyuncuların maçlarına bölünür.
+              Baz oran sonuç ekranındaki kaydırıcıyla geçici olarak da
+              değiştirilebilir (5'lik adımlarla).
+            </p>
+            <Example>
+              <p>
+                10.000 TL lig ücreti, 5 oyuncu, kişi başı 2.000 TL avans, 16
+                toplam maç, baz oran %40.
+              </p>
+              <p>
+                Sabit kısım: 2.000 × %40 = 800 TL kişi başı (toplam 4.000 TL).
+              </p>
+              <p>Maçlara dağıtılan: 6.000 / 16 = 375 TL maç başı.</p>
+              <p>3 maç oynayan oyuncu: 800 + (3 × 375) = 1.925 TL pay.</p>
+            </Example>
+          </Section>
+
           <Section title="Pay, net ve mahsup">
             <p>
               <strong>Net = İlk ücret − Pay.</strong>
