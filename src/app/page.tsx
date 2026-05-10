@@ -80,18 +80,22 @@ export default function Home() {
 						{step === 1 && !canCompute && hasPlayers && hasLeagueFee && blockReason}
 					</div>
 					<div className="flex items-center gap-2">
-						<Button variant="secondary" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}>
-							← Geri
-						</Button>
-						<Button
-							onClick={() => safeSetStep(Math.min(LAST_STEP, step + 1))}
-							disabled={step === LAST_STEP || !canGoToStep(step + 1)}
-							title={
-								step + 1 === 2 && !canCompute ? blockReason : undefined
-							}
-						>
-							İleri →
-						</Button>
+						{step > 0 && (
+							<Button variant="secondary" onClick={() => setStep(Math.max(0, step - 1))}>
+								← Geri
+							</Button>
+						)}
+						{step < LAST_STEP && (
+							<Button
+								onClick={() => safeSetStep(Math.min(LAST_STEP, step + 1))}
+								disabled={!canGoToStep(step + 1)}
+								title={
+									step + 1 === 2 && !canCompute ? blockReason : undefined
+								}
+							>
+								İleri →
+							</Button>
+						)}
 					</div>
 				</div>
 			</div>
