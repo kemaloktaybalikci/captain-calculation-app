@@ -1,13 +1,16 @@
-import type { ReactNode } from "react";
+"use client";
+import { useEffect, useState, type ReactNode } from "react";
 
 export function Field({
   label,
   hint,
+  tooltip,
   children,
   required,
 }: {
   label: string;
   hint?: string;
+  tooltip?: string;
   children: ReactNode;
   required?: boolean;
 }) {
@@ -16,6 +19,18 @@ export function Field({
       <span className="block text-sm font-medium text-zinc-700 mb-1">
         {label}
         {required && <span className="text-red-500 ml-0.5">*</span>}
+        {tooltip && (
+          <span
+            tabIndex={0}
+            aria-label={tooltip}
+            className="tooltip-anchor relative ml-1 inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-200 text-zinc-600 text-[10px] font-medium cursor-help align-middle hover:bg-zinc-300 focus-visible:bg-zinc-300 focus:outline-none transition-colors"
+          >
+            ?
+            <span className="tooltip-bubble pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-20 px-2 py-1 text-xs font-normal bg-zinc-900 text-white rounded shadow-lg w-max max-w-xs whitespace-normal text-left normal-case tracking-normal">
+              {tooltip}
+            </span>
+          </span>
+        )}
       </span>
       {children}
       {hint && (
@@ -33,8 +48,6 @@ const inputBase =
 export function NumberInput({
   value,
   onChange,
-  min,
-  step,
   placeholder,
   className,
 }: {
@@ -45,20 +58,36 @@ export function NumberInput({
   placeholder?: string;
   className?: string;
 }) {
+  const [text, setText] = useState<string>(() =>
+    value === 0 ? "" : String(value),
+  );
+
+  useEffect(() => {
+    const parsed = parseFloat(text.replace(",", "."));
+    const current = Number.isFinite(parsed) ? parsed : 0;
+    if (current !== value) {
+      setText(value === 0 ? "" : String(value));
+    }
+  }, [value]);
+
   return (
     <input
-      type="number"
+      type="text"
       inputMode="decimal"
-      value={Number.isFinite(value) ? value : 0}
+      value={text}
       onChange={(e) => {
-        const raw = e.target.value.replace(",", ".");
-        const v = parseFloat(raw);
+        const raw = e.target.value;
+        if (!/^[0-9.,]*$/.test(raw)) return;
+        setText(raw);
+        if (raw === "") {
+          onChange(0);
+          return;
+        }
+        const v = parseFloat(raw.replace(",", "."));
         onChange(Number.isFinite(v) ? v : 0);
       }}
       onFocus={(e) => e.currentTarget.select()}
-      min={min}
-      step={step ?? "any"}
-      placeholder={placeholder}
+      placeholder={placeholder ?? "0"}
       className={`${inputBase} tabular-nums ${className ?? ""}`}
     />
   );

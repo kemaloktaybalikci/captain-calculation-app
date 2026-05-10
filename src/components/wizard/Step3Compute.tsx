@@ -78,7 +78,6 @@ export function Step3Compute({
   return (
     <ResultsView
       result={result}
-      mode={state.config.topMode}
       exporting={exporting}
       exportError={exportError}
       onExport={handleExport}
@@ -143,13 +142,11 @@ function ComputingState() {
 
 function ResultsView({
   result,
-  mode,
   exporting,
   exportError,
   onExport,
 }: {
   result: ComputedResult;
-  mode: "full-settlement" | "per-match";
   exporting: boolean;
   exportError: string;
   onExport: () => void;
@@ -170,7 +167,7 @@ function ResultsView({
             Sonuç
           </div>
           <div className="text-xl font-semibold text-zinc-900">
-            {mode === "full-settlement" ? "Tam Mahsup" : "Maç Başı"}
+            Maç Başı Pay
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -235,6 +232,7 @@ function ResultsView({
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase text-zinc-500 border-b border-zinc-200">
+                <th className="py-2.5 px-2 font-medium text-right w-1">#</th>
                 <th className="py-2.5 px-2 font-medium">Ad</th>
                 <th className="py-2.5 px-2 font-medium text-right">Maç</th>
                 <th className="py-2.5 px-2 font-medium text-right">İlk Ücret</th>
@@ -244,19 +242,21 @@ function ResultsView({
               </tr>
             </thead>
             <tbody>
-              {calc.perPlayer.map((r) => (
+              {calc.perPlayer.map((r, idx) => (
                 <tr
                   key={r.playerId}
                   className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/60 transition-colors"
                 >
+                  <td className="py-3 px-2 text-right tabular-nums text-zinc-400">
+                    {idx + 1}
+                  </td>
                   <td className="py-3 px-2">
                     <div className="font-medium text-zinc-900">
                       {r.name}
                     </div>
-                    {(r.exempt || r.forgiven || r.notes.length > 0) && (
+                    {(r.exempt || r.notes.length > 0) && (
                       <div className="text-xs text-zinc-500 mt-0.5 flex gap-1.5 flex-wrap items-center">
                         {r.exempt && <Badge tone="muted">muaf</Badge>}
-                        {r.forgiven && <Badge tone="warn">tolerans</Badge>}
                         {r.notes.length > 0 && !r.exempt && (
                           <span>{r.notes.join(" · ")}</span>
                         )}

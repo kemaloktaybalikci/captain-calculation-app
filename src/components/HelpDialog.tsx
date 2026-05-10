@@ -42,11 +42,10 @@ export function HelpDialog({
         <div className="px-6 py-5 space-y-5 text-sm text-zinc-700 leading-relaxed">
           <p>
             Bu uygulama takım kaptanlarına, lig giderini oyunculara
-            <em> oynadıkları maç sayısına göre </em> dağıtmak için iki basit
-            yöntem sunar.
+            <em> oynadıkları maç sayısına göre </em> dağıtmak için kullanılır.
           </p>
 
-          <Section title="Tam Mahsup">
+          <Section title="Maç Başı Pay">
             <p>
               <strong>Toplanan avans + sponsor = lig ücreti</strong> olduğu
               senaryolarda kullanılır. Lig ücreti, muaf olmayan oyuncuların
@@ -59,21 +58,6 @@ export function HelpDialog({
               </p>
               <p>20 maç oynandı → maç başı 1.250 TL.</p>
               <p>5 maç oynayan oyuncunun payı 6.250 TL olur.</p>
-            </Example>
-          </Section>
-
-          <Section title="Maç Başı">
-            <p>
-              Maç başı bedeli kaptan elle belirler (örn. 1.500 TL/maç). Her
-              oyuncunun payı = oynadığı maç × bedel. Bu modda kasada artık
-              para kalabilir (fazla toplandıysa) ya da açık çıkabilir (eksik
-              toplandıysa).
-            </p>
-            <Example>
-              <p>
-                Maç başı 1.500 TL. Bir oyuncu 5 maç oynadı, 7.500 TL avans
-                vermişse net 0; 6.000 TL avans vermişse 1.500 TL kasaya borç.
-              </p>
             </Example>
           </Section>
 
@@ -108,32 +92,6 @@ export function HelpDialog({
               vb.). Maçları, muaf-olmayanların maliyet bölümüne dahil
               edilmez; böylece davetlinin masrafı doğal olarak diğer
               oyunculara dağılır.
-            </p>
-          </Section>
-
-          <Section title="Tolerans (sadece Maç Başı)">
-            <p>
-              Küçük farklar için mahsuplaşmayı atlama seçeneği:
-            </p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>
-                <strong>Maç bandı:</strong> oyuncunun beklenen maçı (avans /
-                maç bedeli) ile gerçek arasındaki fark belirli aralıktaysa,
-                net 0 kabul edilir.
-              </li>
-              <li>
-                <strong>Para eşiği:</strong> |net| eşik değerin altındaysa
-                yine net 0 kabul edilir.
-              </li>
-            </ul>
-          </Section>
-
-          <Section title="WO (walkover)">
-            <p>
-              Maç Başı modunda, oynanmamış WO maçlarının maliyeti muaf-olmayan
-              tüm oyunculara eşit dağılır (her birinin payına eklenir). Tam
-              Mahsup&apos;ta WO ayrıca girilmez; sadece gerçek oynanan maçlar
-              dikkate alınır.
             </p>
           </Section>
         </div>

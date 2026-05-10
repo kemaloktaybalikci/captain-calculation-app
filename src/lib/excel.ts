@@ -27,7 +27,6 @@ export async function exportResultsToExcel(args: {
 
   const totalAdvance = calc.perPlayer.reduce((s, r) => s + r.advance, 0);
   const today = new Date().toLocaleDateString("tr-TR");
-  const isFullSettlement = config.topMode === "full-settlement";
   const isKasa = settlement.mode === "kasa";
 
   const rows: Cell[][] = [];
@@ -40,9 +39,7 @@ export async function exportResultsToExcel(args: {
   };
 
   // Title
-  pushBanner(
-    `Kaptan Hesap — ${isFullSettlement ? "Tam Mahsup" : "Maç Başı"} · ${today}`,
-  );
+  pushBanner(`Kaptan Hesap — Maç Başı Pay · ${today}`);
   rows.push([]);
 
   // Stats — two columns of label/value pairs
@@ -74,20 +71,6 @@ export async function exportResultsToExcel(args: {
         ? "Artık var"
         : "Açık",
   ]);
-  if (!isFullSettlement) {
-    rows.push([
-      "WO Sayısı",
-      config.woCount,
-      "",
-      "Tolerans",
-      config.tolerance.type === "none"
-        ? "Yok"
-        : config.tolerance.type === "matches"
-          ? `Maç bandı ±${config.tolerance.matchBand}`
-          : `Para eşiği ${config.tolerance.moneyThreshold} TL`,
-      "",
-    ]);
-  }
   rows.push([]);
 
   // Section: Settlement flow (centerpiece)
@@ -138,21 +121,19 @@ export async function exportResultsToExcel(args: {
 
   // Section: Per-player breakdown
   pushBanner("OYUNCULAR");
-  rows.push(["Oyuncu", "Maç", "İlk Ücret", "Pay", "Net", "Durum"]);
+  rows.push(["Oyuncu Adı", "Maç Sayısı", "İlk Ücret", "Pay", "Net", "Durum"]);
   for (const r of calc.perPlayer) {
     const status = r.exempt
       ? "Muaf"
-      : r.forgiven
-        ? "Tolerans (net 0)"
-        : r.finalNet > 0.5
+      : r.finalNet > 0.5
+        ? isKasa
+          ? "Kasadan alacaklı"
+          : "Alacaklı"
+        : r.finalNet < -0.5
           ? isKasa
-            ? "Kasadan alacaklı"
-            : "Alacaklı"
-          : r.finalNet < -0.5
-            ? isKasa
-              ? "Kasaya borçlu"
-              : "Borçlu"
-            : "Eşit";
+            ? "Kasaya borçlu"
+            : "Borçlu"
+          : "Eşit";
     rows.push([
       r.name,
       r.matches,
@@ -198,14 +179,12 @@ export async function exportResultsToExcel(args: {
   // Detail sheet — full per-player breakdown for transparency
   const detail: Cell[][] = [
     [
-      "Oyuncu",
+      "Oyuncu Adı",
       "Muaf",
-      "Maç",
+      "Maç Sayısı",
       "İlk Ücret",
       "Pay",
-      "Ham Net",
-      "Final Net",
-      "Tolerans",
+      "Net",
       "Notlar",
     ],
     ...calc.perPlayer.map((r): Cell[] => [
@@ -214,9 +193,7 @@ export async function exportResultsToExcel(args: {
       r.matches,
       round2(r.advance),
       round2(r.share),
-      round2(r.net),
       round2(r.finalNet),
-      r.forgiven ? "Evet" : "Hayır",
       r.notes.join(" | "),
     ]),
   ];
@@ -228,8 +205,6 @@ export async function exportResultsToExcel(args: {
     { wch: 14 },
     { wch: 14 },
     { wch: 14 },
-    { wch: 14 },
-    { wch: 10 },
     { wch: 36 },
   ];
   XLSX.utils.book_append_sheet(wb, wsDetail, "Detay");

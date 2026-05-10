@@ -1,6 +1,4 @@
-export type TopMode = "full-settlement" | "per-match";
-
-export type ToleranceType = "none" | "matches" | "money";
+export type TopMode = "full-settlement";
 
 export type SettlementMode = "kasa" | "p2p";
 
@@ -12,20 +10,10 @@ export interface Player {
   exempt: boolean;
 }
 
-export interface ToleranceConfig {
-  type: ToleranceType;
-  matchBand: number;
-  moneyThreshold: number;
-}
-
 export interface Config {
   topMode: TopMode;
   leagueFee: number;
   sponsorContribution: number;
-  costPerMatch: number;
-  woCount: number;
-  tolerance: ToleranceConfig;
-  minRegistrationFee: number;
   settlementMode: SettlementMode;
 }
 
@@ -37,7 +25,6 @@ export interface PlayerResult {
   exempt: boolean;
   share: number;
   net: number;
-  forgiven: boolean;
   finalNet: number;
   notes: string[];
 }

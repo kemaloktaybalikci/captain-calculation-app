@@ -1,37 +1,32 @@
 "use client";
 import type { CalcStateApi } from "../../hooks/useCalcState";
-import { Card, Field, NumberInput, Select } from "../ui/Field";
+import { Card, Field, NumberInput } from "../ui/Field";
 import { formatTL } from "../../lib/format";
 
 export function Step2Settings({ api }: { api: CalcStateApi }) {
-  const { state, setConfig, setTolerance } = api;
+  const { state, setConfig } = api;
   const c = state.config;
 
   const totalAdvance = state.players.reduce((s, p) => s + p.advance, 0);
   const collectedPlusSponsor = totalAdvance + c.sponsorContribution;
+  const netDiff = collectedPlusSponsor - c.leagueFee;
   const lDist = c.leagueFee - c.sponsorContribution;
   const M_nonExempt = state.players
     .filter((p) => !p.exempt)
     .reduce((s, p) => s + p.matches, 0);
   const autoCostPerMatch = M_nonExempt > 0 ? lDist / M_nonExempt : 0;
-  const fullSettlementMatches =
-    Math.abs(collectedPlusSponsor - c.leagueFee) < 0.5;
+  const settingsInvalid = c.leagueFee > 0 && Math.abs(netDiff) >= 0.5;
+  const netTone =
+    c.leagueFee === 0 ? "neutral" : settingsInvalid ? "warn" : "ok";
 
   return (
     <div className="grid gap-5">
       <Card title="Hesaplama Modu">
         <div className="grid gap-3 md:grid-cols-2">
           <ModeOption
-            checked={c.topMode === "full-settlement"}
-            onChange={() => setConfig({ topMode: "full-settlement" })}
-            title="Tam Mahsup"
+            checked
+            title="Maç Başı Pay"
             desc="Toplanan + sponsor = lig ücreti olmalı. Lig ücreti, muaf olmayanların maçlarına bölünür. Σ net = 0."
-          />
-          <ModeOption
-            checked={c.topMode === "per-match"}
-            onChange={() => setConfig({ topMode: "per-match" })}
-            title="Maç Başı"
-            desc="Maç başı bedel manuel girilir. Kasada artık para kalabilir. Tolerans uygulanabilir."
           />
         </div>
       </Card>
@@ -39,7 +34,10 @@ export function Step2Settings({ api }: { api: CalcStateApi }) {
       <Card title="Para Akışı">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="grid gap-3">
-            <Field label="Toplanan (Excel'den)">
+            <Field
+              label="Toplanan"
+              tooltip="Kadro sayfasındaki ilk ücretlerin toplamı"
+            >
               <ReadOnlyAmount value={totalAdvance} />
             </Field>
             <Field label="Lig Ücreti (TL)" required>
@@ -59,25 +57,18 @@ export function Step2Settings({ api }: { api: CalcStateApi }) {
           </div>
           <div className="grid gap-3 content-start">
             <Field label="Net (Toplanan + Sponsor − Lig)">
-              <ReadOnlyAmount
-                value={collectedPlusSponsor - c.leagueFee}
-                tone={
-                  Math.abs(collectedPlusSponsor - c.leagueFee) < 0.5
-                    ? "ok"
-                    : "warn"
-                }
-              />
+              <ReadOnlyAmount value={netDiff} tone={netTone} />
             </Field>
             <Field label="Dağıtılacak (Lig − Sponsor)">
               <ReadOnlyAmount value={lDist} />
             </Field>
-            {c.topMode === "full-settlement" && !fullSettlementMatches && (
+            {settingsInvalid && (
               <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                Tam Mahsup&apos;ta toplanan + sponsor, lig ücretine eşit
-                olmalı. Aksi halde kasada açık/fazla kalır.
+                Toplanan + sponsor, lig ücretine eşit olmalı. Aksi halde
+                hesaplama yapılamaz.
               </div>
             )}
-            {c.topMode === "full-settlement" && M_nonExempt > 0 && (
+            {M_nonExempt > 0 && (
               <div className="text-xs text-zinc-500">
                 Otomatik maç başı bedel:{" "}
                 <span className="font-medium text-zinc-700">
@@ -89,77 +80,6 @@ export function Step2Settings({ api }: { api: CalcStateApi }) {
           </div>
         </div>
       </Card>
-
-      {c.topMode === "per-match" && (
-        <Card title="Maç Başı Ayarları">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Maç Başı Bedel (TL)" required>
-              <NumberInput
-                value={c.costPerMatch}
-                onChange={(v) => setConfig({ costPerMatch: v })}
-                min={0}
-              />
-            </Field>
-            <Field
-              label="WO Sayısı"
-              hint="WO maliyeti muaf olmayan oyunculara eşit dağılır."
-            >
-              <NumberInput
-                value={c.woCount}
-                onChange={(v) => setConfig({ woCount: v })}
-                min={0}
-              />
-            </Field>
-            <Field label="Tolerans Türü">
-              <Select
-                value={c.tolerance.type}
-                onChange={(v) => setTolerance({ type: v })}
-                options={[
-                  { value: "none", label: "Yok" },
-                  { value: "matches", label: "Maç bandı (beklenen ± X)" },
-                  { value: "money", label: "Para eşiği (|net| ≤ X)" },
-                ]}
-              />
-            </Field>
-            {c.tolerance.type === "matches" && (
-              <Field
-                label="Maç Bant Genişliği (±)"
-                hint={`Beklenen = avans / maç bedeli. ${
-                  c.costPerMatch > 0
-                    ? `Örn: 3,5 ± ${c.tolerance.matchBand} → bant [${(3.5 - c.tolerance.matchBand).toFixed(1)}, ${(3.5 + c.tolerance.matchBand).toFixed(1)}]`
-                    : ""
-                }`}
-              >
-                <NumberInput
-                  value={c.tolerance.matchBand}
-                  onChange={(v) => setTolerance({ matchBand: v })}
-                  min={0}
-                  step={0.5}
-                />
-              </Field>
-            )}
-            {c.tolerance.type === "money" && (
-              <Field label="Para Eşiği (TL)">
-                <NumberInput
-                  value={c.tolerance.moneyThreshold}
-                  onChange={(v) => setTolerance({ moneyThreshold: v })}
-                  min={0}
-                />
-              </Field>
-            )}
-            <Field
-              label="Minimum Giriş Ücreti (TL)"
-              hint="Hiç oynamamış ama avans vermiş oyunculardan kesilir."
-            >
-              <NumberInput
-                value={c.minRegistrationFee}
-                onChange={(v) => setConfig({ minRegistrationFee: v })}
-                min={0}
-              />
-            </Field>
-          </div>
-        </Card>
-      )}
 
       <Card title="Mahsup Modu">
         <div className="grid gap-3 md:grid-cols-2">
@@ -188,13 +108,16 @@ function ModeOption({
   desc,
 }: {
   checked: boolean;
-  onChange: () => void;
+  onChange?: () => void;
   title: string;
   desc: string;
 }) {
+  const interactive = onChange !== undefined;
   return (
     <label
-      className={`flex items-start gap-3 p-4 rounded-md border cursor-pointer transition ${
+      className={`flex items-start gap-3 p-4 rounded-md border transition ${
+        interactive ? "cursor-pointer" : ""
+      } ${
         checked
           ? "bg-zinc-900 text-white border-zinc-900"
           : "bg-white border-zinc-200 hover:bg-zinc-50"
@@ -203,7 +126,8 @@ function ModeOption({
       <input
         type="radio"
         checked={checked}
-        onChange={onChange}
+        onChange={onChange ?? (() => {})}
+        readOnly={!interactive}
         className="mt-1"
       />
       <div>

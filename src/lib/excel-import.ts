@@ -7,23 +7,6 @@ export interface ExcelParseResult {
   errors: string[];
 }
 
-const TRUE_TOKENS = new Set([
-  "true",
-  "evet",
-  "1",
-  "x",
-  "yes",
-  "var",
-  "y",
-]);
-
-function toBool(v: unknown): boolean {
-  if (typeof v === "boolean") return v;
-  if (typeof v === "number") return v !== 0;
-  if (v == null) return false;
-  return TRUE_TOKENS.has(String(v).trim().toLowerCase());
-}
-
 function toNumber(v: unknown): number {
   if (typeof v === "number") return v;
   if (v == null || v === "") return 0;
@@ -32,12 +15,15 @@ function toNumber(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-const HEADER_MAP: Record<string, "name" | "advance" | "matches" | "exempt"> = {
+const HEADER_MAP: Record<string, "name" | "advance" | "matches"> = {
+  "oyuncu adı": "name",
+  "oyuncu adi": "name",
+  oyuncu: "name",
   ad: "name",
   isim: "name",
-  oyuncu: "name",
   name: "name",
 
+  "i̇lk ücret": "advance",
   "ilk ücret": "advance",
   "ilk ucret": "advance",
   ilkucret: "advance",
@@ -46,17 +32,16 @@ const HEADER_MAP: Record<string, "name" | "advance" | "matches" | "exempt"> = {
   ucret: "advance",
   advance: "advance",
 
-  "oyun sayısı": "matches",
-  "oyun sayisi": "matches",
-  oyun: "matches",
   "maç sayısı": "matches",
   "mac sayisi": "matches",
+  macsayisi: "matches",
+  "oyun sayısı": "matches",
+  "oyun sayisi": "matches",
+  oyunsayisi: "matches",
+  oyun: "matches",
   maç: "matches",
   mac: "matches",
   matches: "matches",
-
-  muaf: "exempt",
-  exempt: "exempt",
 };
 
 function normalize(s: string): string {
@@ -84,7 +69,7 @@ export async function parseRosterExcel(file: File): Promise<ExcelParseResult> {
   }
 
   const headers = Object.keys(rows[0]);
-  const colMap: Record<string, "name" | "advance" | "matches" | "exempt"> = {};
+  const colMap: Record<string, "name" | "advance" | "matches"> = {};
   for (const h of headers) {
     const mapped = HEADER_MAP[normalize(h)];
     if (mapped) colMap[h] = mapped;
@@ -93,11 +78,9 @@ export async function parseRosterExcel(file: File): Promise<ExcelParseResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
   const have = new Set(Object.values(colMap));
-  if (!have.has("name")) errors.push("Zorunlu sütun eksik: 'ad'");
-  if (!have.has("advance")) errors.push("Zorunlu sütun eksik: 'ilk ücret'");
-  if (!have.has("matches")) errors.push("Zorunlu sütun eksik: 'oyun sayısı'");
-  if (!have.has("exempt"))
-    warnings.push("'muaf' sütunu yok — herkes muaf olmayan kabul edildi.");
+  if (!have.has("name")) errors.push("Zorunlu sütun eksik: 'Oyuncu Adı'");
+  if (!have.has("advance")) errors.push("Zorunlu sütun eksik: 'İlk Ücret'");
+  if (!have.has("matches")) errors.push("Zorunlu sütun eksik: 'Maç Sayısı'");
 
   if (errors.length > 0) return { players: [], warnings, errors };
 
@@ -113,7 +96,6 @@ export async function parseRosterExcel(file: File): Promise<ExcelParseResult> {
       makePlayer(name, {
         advance: toNumber(data.advance),
         matches: toNumber(data.matches),
-        exempt: toBool(data.exempt),
       }),
     );
   }
@@ -123,14 +105,14 @@ export async function parseRosterExcel(file: File): Promise<ExcelParseResult> {
 export async function generateRosterTemplate(): Promise<void> {
   const XLSX = await import("xlsx");
   const data = [
-    ["ad", "ilk ücret", "oyun sayısı", "muaf"],
-    ["Kemal", 5000, 5, false],
-    ["Ali", 4000, 4, false],
-    ["Davetli", 0, 3, true],
+    ["Oyuncu Adı", "İlk Ücret", "Maç Sayısı"],
+    ["Kemal", 5000, 5],
+    ["Ali", 4000, 4],
+    ["Mehmet", 3500, 3],
   ];
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws["!cols"] = [{ wch: 18 }, { wch: 12 }, { wch: 14 }, { wch: 8 }];
+  ws["!cols"] = [{ wch: 18 }, { wch: 12 }, { wch: 14 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Kadro");
-  XLSX.writeFile(wb, "kadro-sablonu.xlsx");
+  XLSX.writeFile(wb, "kadro-ornek.xlsx");
 }

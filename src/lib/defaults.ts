@@ -20,14 +20,6 @@ export const defaultConfig: Config = {
   topMode: "full-settlement",
   leagueFee: 0,
   sponsorContribution: 0,
-  costPerMatch: 0,
-  woCount: 0,
-  tolerance: {
-    type: "none",
-    matchBand: 0.5,
-    moneyThreshold: 50,
-  },
-  minRegistrationFee: 0,
   settlementMode: "kasa",
 };
 

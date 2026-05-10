@@ -42,10 +42,7 @@ function mergeWithDefaults(state: Partial<AppState> | undefined): AppState {
     config: {
       ...defaultState.config,
       ...cfg,
-      tolerance: {
-        ...defaultState.config.tolerance,
-        ...(cfg.tolerance ?? {}),
-      },
+      topMode: "full-settlement",
     },
     players: (state.players ?? []).map((p) => ({
       id: p.id,

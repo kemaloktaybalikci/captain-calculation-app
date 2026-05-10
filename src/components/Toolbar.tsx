@@ -2,20 +2,12 @@
 import { useState } from "react";
 import type { CalcStateApi } from "../hooks/useCalcState";
 import { Button, IconButton } from "./ui/Field";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { HelpDialog } from "./HelpDialog";
 
 export function Toolbar({ api }: { api: CalcStateApi }) {
   const [helpOpen, setHelpOpen] = useState(false);
-
-  const handleReset = () => {
-    if (
-      confirm(
-        "Tüm veri silinecek. localStorage temizlenecek. Devam edilsin mi?",
-      )
-    ) {
-      api.reset();
-    }
-  };
+  const [confirmReset, setConfirmReset] = useState(false);
 
   return (
     <div className="flex gap-1 items-center">
@@ -25,10 +17,21 @@ export function Toolbar({ api }: { api: CalcStateApi }) {
       >
         <QuestionIcon />
       </IconButton>
-      <Button variant="ghost" onClick={handleReset}>
+      <Button variant="ghost" onClick={() => setConfirmReset(true)}>
         Sıfırla
       </Button>
       <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <ConfirmDialog
+        open={confirmReset}
+        onClose={() => setConfirmReset(false)}
+        onConfirm={() => {
+          api.reset();
+          setConfirmReset(false);
+        }}
+        title="Tüm veriyi sıfırla"
+        description="Kadro, ayarlar ve hesaplar dahil tüm veriler kalıcı olarak silinecek. Bu işlem geri alınamaz."
+        confirmLabel="Sıfırla"
+      />
     </div>
   );
 }

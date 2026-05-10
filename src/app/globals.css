@@ -77,3 +77,14 @@ input[type="number"] {
 .dialog-in {
   animation: dialog-in 200ms ease-out;
 }
+
+.tooltip-bubble {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 100ms ease-out;
+}
+.tooltip-anchor:hover .tooltip-bubble,
+.tooltip-anchor:focus-visible .tooltip-bubble {
+  visibility: visible;
+  opacity: 1;
+}

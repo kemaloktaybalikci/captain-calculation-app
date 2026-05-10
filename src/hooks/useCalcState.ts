@@ -10,7 +10,6 @@ export interface CalcStateApi {
   state: AppState;
   loaded: boolean;
   setConfig: (patch: Partial<Config>) => void;
-  setTolerance: (patch: Partial<Config["tolerance"]>) => void;
   setPlayers: (next: Player[]) => void;
   addPlayer: (player: Player) => void;
   updatePlayer: (id: string, patch: Partial<Player>) => void;
@@ -50,21 +49,13 @@ export function useCalcState(): CalcStateApi {
       setState((s) => ({ ...s, config: { ...s.config, ...patch } })),
     [],
   );
-  const setTolerance = useCallback(
-    (patch: Partial<Config["tolerance"]>) =>
-      setState((s) => ({
-        ...s,
-        config: { ...s.config, tolerance: { ...s.config.tolerance, ...patch } },
-      })),
-    [],
-  );
   const setPlayers = useCallback(
     (next: Player[]) => setState((s) => ({ ...s, players: next })),
     [],
   );
   const addPlayer = useCallback(
     (player: Player) =>
-      setState((s) => ({ ...s, players: [...s.players, player] })),
+      setState((s) => ({ ...s, players: [player, ...s.players] })),
     [],
   );
   const updatePlayer = useCallback(
@@ -93,7 +84,6 @@ export function useCalcState(): CalcStateApi {
     state,
     loaded,
     setConfig,
-    setTolerance,
     setPlayers,
     addPlayer,
     updatePlayer,
