@@ -29,7 +29,7 @@ export async function exportResultsToExcel(args: {
   const today = new Date().toLocaleDateString("tr-TR");
   const isKasa = settlement.mode === "kasa";
   const isBaseRate = calc.mode === "base-rate";
-  const modeLabel = isBaseRate ? "Baz Oranlı Pay" : "Maç Başı Pay";
+  const modeLabel = isBaseRate ? "Katılım Payı + Maç Başı Pay" : "Maç Başı Pay";
 
   const rows: Cell[][] = [];
   const merges: MergeRange[] = [];
@@ -55,8 +55,16 @@ export async function exportResultsToExcel(args: {
   ]);
   if (isBaseRate) {
     rows.push([
-      `Baz Oran (%${calc.baseRatePercent})`,
+      `Katılım Payı Oranı (%${calc.baseRatePercent})`,
       round2(calc.totalBaseShare),
+      "",
+      "Sponsor / Ek Ödeme",
+      config.sponsorContribution,
+      "",
+    ]);
+    rows.push([
+      "Oyunculara Dağıtılacak",
+      round2(config.leagueFee - config.sponsorContribution),
       "",
       "Maçlara Dağıtılan",
       round2(calc.totalShareDistributed - calc.totalBaseShare),
@@ -139,7 +147,7 @@ export async function exportResultsToExcel(args: {
       "Oyuncu Adı",
       "Maç Sayısı",
       "İlk Ücret",
-      "Sabit",
+      "Katılım Payı",
       "Maç Payı",
       "Toplam Pay",
     ]);
@@ -229,7 +237,7 @@ export async function exportResultsToExcel(args: {
         "Muaf",
         "Maç Sayısı",
         "İlk Ücret",
-        "Sabit",
+        "Katılım Payı",
         "Maç Payı",
         "Toplam Pay",
         "Net",

@@ -34,6 +34,7 @@ export function Step3Compute({
   const [rateOverride, setRateOverride] = useState<number | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRateOverride(null);
   }, [configuredRate, isBaseRate]);
 
@@ -109,7 +110,7 @@ export function Step3Compute({
             Sonuç
           </div>
           <div className="text-xl font-semibold text-zinc-900">
-            {isBaseRate ? "Baz Oranlı Pay" : "Maç Başı Pay"}
+            {isBaseRate ? "Katılım Payı + Maç Başı Pay" : "Maç Başı Pay"}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -171,7 +172,7 @@ function BaseRateSlider({
       <div className="flex items-center gap-4 flex-wrap">
         <div className="min-w-[140px]">
           <div className="text-xs uppercase tracking-wide text-zinc-500">
-            Baz Oran
+            Katılım Payı Oranı
           </div>
           <div className="text-2xl font-semibold tabular-nums text-zinc-900">
             %{value}
@@ -191,7 +192,7 @@ function BaseRateSlider({
             value={value}
             onChange={(e) => onChange(snapRate(Number(e.target.value)))}
             className="flex-1 accent-zinc-900"
-            aria-label="Baz oran kaydırıcısı"
+            aria-label="Katılım payı oranı kaydırıcısı"
           />
         </div>
         {overrideActive && (
@@ -291,7 +292,7 @@ function ResultsView({ result }: { result: ComputedResult }) {
           )}
           hint={
             isBaseRate
-              ? `Sabit kısım: ${formatTL(calc.totalBaseShare)}`
+              ? `Katılım payı: ${formatTL(calc.totalBaseShare)}`
               : undefined
           }
         />
@@ -329,7 +330,7 @@ function ResultsView({ result }: { result: ComputedResult }) {
                 <th className="py-2.5 px-2 font-medium text-right">Maç</th>
                 <th className="py-2.5 px-2 font-medium text-right">İlk Ücret</th>
                 {isBaseRate && (
-                  <th className="py-2.5 px-2 font-medium text-right">Sabit</th>
+                  <th className="py-2.5 px-2 font-medium text-right">Katılım</th>
                 )}
                 <th className="py-2.5 px-2 font-medium text-right">Pay</th>
                 <th className="py-2.5 px-2 font-medium text-right">Net</th>

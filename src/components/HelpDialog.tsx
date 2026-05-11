@@ -47,10 +47,10 @@ export function HelpDialog({
 
           <Section title="Maç Başı Pay">
             <p>
-              <strong>Toplanan avans + sponsor = lig ücreti</strong> olduğu
-              senaryolarda kullanılır. Lig ücreti, muaf olmayan oyuncuların
-              oynadığı toplam maça bölünerek <em>maç başı bedel</em> bulunur.
-              Her oyuncuya bu bedel kadar pay düşer.
+              Ücret, yalnızca muaf olmayan oyuncuların oynadığı maç sayılarına
+              göre dağıtılır. Maç yapmayan oyuncuya ücret yansımaz. Dağıtılacak
+              tutar, muaf olmayan oyuncuların oynadığı toplam maça bölünerek
+              <em> maç başı bedel</em> bulunur.
             </p>
             <Example>
               <p>
@@ -61,21 +61,26 @@ export function HelpDialog({
             </Example>
           </Section>
 
-          <Section title="Baz Oranlı Pay">
+          <Section title="Katılım Payı + Maç Başı Pay">
             <p>
-              Her oyuncunun verdiği paranın <em>belirlenen yüzdesi</em> sabit
-              olarak kendi payına yazılır. Bu sabit kısımlar lig ücretinden
-              düşülür, kalan tutar muaf olmayan oyuncuların maçlarına bölünür.
-              Baz oran sonuç ekranındaki kaydırıcıyla geçici olarak da
-              değiştirilebilir (5'lik adımlarla).
+              Ücretin bir kısmı tüm muaf olmayan oyunculara sabit katılım payı
+              olarak dağıtılır. Toplanan avans + sponsor lig ücretine eşit
+              olmalıdır. Sponsor lig ücretinden düşüldükten sonra oyunculara
+              dağıtılacak tutarın <em>belirlenen yüzdesi</em>{" "}katılım payı havuzu kabul edilir ve
+              muaf olmayan oyunculara eşit kişi başı katılım payı olarak
+              yazılır. Kalan tutar, muaf olmayan oyuncuların maç sayılarına
+              bölünür. Katılım payı oranı sonuç ekranındaki kaydırıcıyla geçici olarak da
+              değiştirilebilir (5&apos;lik adımlarla).
             </p>
             <Example>
               <p>
-                10.000 TL lig ücreti, 5 oyuncu, kişi başı 2.000 TL avans, 16
-                toplam maç, baz oran %40.
+                12.000 TL lig ücreti, 2.000 TL sponsor, 5 oyuncu, kişi başı
+                2.000 TL avans, 16 toplam maç, katılım payı oranı %40.
               </p>
               <p>
-                Sabit kısım: 2.000 × %40 = 800 TL kişi başı (toplam 4.000 TL).
+                Oyunculara dağıtılacak: 12.000 - 2.000 = 10.000 TL.
+                Katılım payı havuzu: 10.000 × %40 = 4.000 TL. Kişi başı katılım payı:
+                4.000 / 5 = 800 TL.
               </p>
               <p>Maçlara dağıtılan: 6.000 / 16 = 375 TL maç başı.</p>
               <p>3 maç oynayan oyuncu: 800 + (3 × 375) = 1.925 TL pay.</p>

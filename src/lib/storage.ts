@@ -56,7 +56,7 @@ function mergeWithDefaults(state: Partial<AppState> | undefined): AppState {
       ...cfg,
       calcMode,
       baseRatePercent,
-      sponsorContribution: calcMode === "base-rate" ? 0 : (cfg.sponsorContribution ?? 0),
+      sponsorContribution: cfg.sponsorContribution ?? 0,
     },
     players: (state.players ?? []).map((p) => ({
       id: p.id,

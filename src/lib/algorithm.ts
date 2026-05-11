@@ -107,37 +107,40 @@ function calculateBaseRate(
   const baseRatePercent = clampRate(config.baseRatePercent);
   const baseRate = baseRatePercent / 100;
   const totalAdvance = players.reduce((s, p) => s + p.advance, 0);
+  const nonExemptPlayers = players.filter((p) => !p.exempt);
+  const playerCost = config.leagueFee - config.sponsorContribution;
+  const collectedPlusSponsor = totalAdvance + config.sponsorContribution;
 
-  if (Math.abs(totalAdvance - config.leagueFee) > 0.5) {
-    const diff = totalAdvance - config.leagueFee;
+  if (Math.abs(collectedPlusSponsor - config.leagueFee) > 0.5) {
+    const diff = collectedPlusSponsor - config.leagueFee;
     warnings.push(
-      `Baz Oranlı Pay: toplanan (${totalAdvance.toFixed(2)}) lig ücreti ${config.leagueFee.toFixed(2)} TL ile eşleşmiyor (fark ${diff.toFixed(2)} TL).`,
+      `Katılım Payı + Maç Başı Pay: toplanan (${totalAdvance.toFixed(2)}) + sponsor (${config.sponsorContribution.toFixed(2)}) = ${collectedPlusSponsor.toFixed(2)} TL, ` +
+        `lig ücreti ${config.leagueFee.toFixed(2)} TL ile eşleşmiyor (fark ${diff.toFixed(2)} TL).`,
     );
   }
 
-  const fixedShares = players.map((p) =>
-    p.exempt ? 0 : round2(p.advance * baseRate),
-  );
-  const totalFixed = fixedShares.reduce((s, v) => s + v, 0);
+  const totalFixed = round2(Math.max(0, playerCost) * baseRate);
+  const perPlayerBaseShare =
+    nonExemptPlayers.length > 0 ? totalFixed / nonExemptPlayers.length : 0;
 
-  const M_nonExempt = players
-    .filter((p) => !p.exempt)
-    .reduce((s, p) => s + p.matches, 0);
+  const M_nonExempt = nonExemptPlayers.reduce((s, p) => s + p.matches, 0);
 
-  const distributable = config.leagueFee - totalFixed;
+  const distributable = playerCost - totalFixed;
   let costPerMatch = 0;
   if (M_nonExempt <= 0) {
     warnings.push("Muaf olmayan oyuncuların maç sayısı 0 — maç payı hesaplanamadı.");
+  } else if (playerCost < 0) {
+    warnings.push("Sponsor katkısı lig ücretini aşıyor.");
   } else if (distributable < 0) {
     warnings.push(
-      `Baz oran çok yüksek: sabit kısım (${totalFixed.toFixed(2)}) lig ücretini aşıyor.`,
+      `Katılım payı oranı çok yüksek: katılım payı (${totalFixed.toFixed(2)}) oyunculara dağıtılacak tutarı aşıyor.`,
     );
   } else {
     costPerMatch = distributable / M_nonExempt;
   }
 
-  const results: PlayerResult[] = players.map((p, i) => {
-    const baseShare = fixedShares[i];
+  const results: PlayerResult[] = players.map((p) => {
+    const baseShare = p.exempt ? 0 : perPlayerBaseShare;
     const matchShare = p.exempt ? 0 : p.matches * costPerMatch;
     const share = baseShare + matchShare;
     const net = p.advance - share;
@@ -158,7 +161,8 @@ function calculateBaseRate(
 
   const totalShare = results.reduce((s, r) => s + r.share, 0);
   const sumFinalNet = results.reduce((s, r) => s + r.finalNet, 0);
-  const kasaBalance = totalAdvance - config.leagueFee - sumFinalNet;
+  const kasaBalance =
+    totalAdvance + config.sponsorContribution - config.leagueFee - sumFinalNet;
 
   return {
     mode: "base-rate",
