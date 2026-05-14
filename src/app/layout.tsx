@@ -8,9 +8,9 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Kaptan Hesap — Tenis Lig Mahsuplaşma",
+  title: "Kaptan Hesap",
   description:
-    "Tenis lig kaptanları için lig ücreti dağıtımı ve mahsup hesaplama uygulaması.",
+    "Sezon öncesi maç başı maliyet ve sezon sonu lig ücreti mahsuplaşma aracı.",
 };
 
 export default function RootLayout({

@@ -246,6 +246,9 @@ export function Step1Roster({ api }: { api: CalcStateApi }) {
 	return (
 		<div className="grid gap-5">
 			<Card title="Oyuncu Ekle">
+				<p className="text-sm text-zinc-500 -mt-2 mb-4">
+					Oyuncuları, maç sayılarını ve ilk ücretlerini manuel girebilir ya da örnek şablonu indirip doldurduktan sonra Excel olarak yükleyebilirsiniz.
+				</p>
 				<div className="flex flex-col md:flex-row md:items-stretch gap-4 md:gap-0">
 					<div className="flex-1 flex flex-wrap gap-3 items-center md:pr-6">
 						<div className="flex-1 min-w-[180px]">
@@ -288,7 +291,7 @@ export function Step1Roster({ api }: { api: CalcStateApi }) {
 
 			<Card title={`Kadro · ${state.players.length} oyuncu${exemptCount > 0 ? `, ${exemptCount} muaf` : ""}`}>
 				{state.players.length === 0 ? (
-					<div className="text-sm text-zinc-500 py-8 text-center">Henüz oyuncu yok. 'Oyuncu Ekle' butonu ile veya 'Excel' ile oyuncu ekleyebilirsiniz.</div>
+					<div className="text-sm text-zinc-500 py-8 text-center">Henüz oyuncu yok. &apos;Oyuncu Ekle&apos; butonu ile veya &apos;Excel&apos; ile oyuncu ekleyebilirsiniz.</div>
 				) : (
 					<>
 						<div className="mb-3 flex flex-wrap items-start gap-3">
